@@ -1,0 +1,94 @@
+---
+title: "Team Match Scorecards"
+output: pdf_document
+classoption: landscape
+geometry: margin=0cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(pander)
+library(knitr)
+library(xtable)
+
+```
+
+```{r courseSetup, include = FALSE}
+options(stringsAsFactors = FALSE)
+
+yds <- c(395, 430, 165, 580, 395, 440, 335, 200, 495, 550, 185, 480, 405, 440, 405, 330, 175, 440)
+yds <- c(yds, 375, 400, 155, 540, 365, 390, 325, 190, 475, 530, 155, 450, 375, 410, 375, 310, 165, 420)
+ts <- c(rep("Blue",18),rep("White",18))
+par <- c(4,4,3,5,4,4,4,3,5,5,3,5,4,4,4,4,3,4)
+par <- c(par, par)
+hcp <- c(13,3,9,1,15,5,11,7,17,4,12,16,14,6,10,8,18,2)
+hcp <- c(hcp, hcp)
+scores <- rep('  ', 36)
+
+tees <- data.frame("Hole" = c(1:18,1:18), "Tees" = ts,
+                   "Yards" = yds, "Par" = par, "Handicap" = hcp,
+                   "Player 1" = scores, "Player 2" = scores, 
+                   "Player 3" = scores, "Player 4" = scores, 
+                   "Player 5" = scores, "Player 6" = scores)
+
+
+ratings <- read.csv('Ratings.csv')
+home <- read.csv('HomeTeam.csv')
+away <- read.csv('AwayTeam.csv')
+
+```
+
+```{r cars, echo = FALSE, results = "asis"}
+players <- 1
+used_tees <- home[players,'Tee']
+used_slope <- ratings[ratings$Tee == used_tees,"Slope"]
+scd <- (tees[tees["Tees"]==used_tees,])
+
+p1_CH <- round(home[players, "Index"]* used_slope / 113)
+p2_CH <- round(away[players, "Index"]* used_slope / 113)
+
+scd[(p1_CH - p2_CH) >= scd$Handicap, 6] <- rep('\\hspace{3 pc}*', p1_CH - p2_CH)
+
+
+out_yds <- sum(scd[1:9,"Yards"])
+out_par <- sum(scd[1:9,"Par"])
+in_yds <- sum(scd[10:18, "Yards"])
+in_par <- sum(scd[10:18, "Par"])
+scd <- rbind(c("Hole","Tees","Yards","Par","Handicap",
+               "Player 1","Player 2", "Player 3", "Player 4", "Player 5", "Player 6"),
+             scd)
+
+
+scd <- rbind(scd[1:10,],
+             c("Out", "", out_yds, out_par, rep("", 7)),
+             scd[-(1:10),],
+             c("In", "", in_yds, in_par, rep("", 7)),
+             c("Total","",in_yds + out_yds, in_par + out_par, rep("",7)),
+             c("HCP", rep("",10)),
+             c("Net",rep("",10)))
+
+scd[1,-(1:5)] <- c(home[players, "Player"],away[players, "Player"], rep("",4))
+scd[23,6:7] <- c(p1_CH, p2_CH)
+
+scd <- xtable(t(scd[,-2]))
+align(scd) <- c('l|','|l|',rep('c|',23))
+
+dont_scrub <- function(x) {
+  gsub('ww','  ', x)
+}
+
+print.xtable(scd, include.colnames = FALSE, include.rownames = FALSE,
+             comment = FALSE, timestamp = FALSE)#, sanitize.text.function = dont_scrub)
+```
+
+
+
+
+
+
+
+
+
+
+
+
