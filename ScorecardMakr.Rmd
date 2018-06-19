@@ -37,7 +37,7 @@ home <- read.csv('HomeTeam.csv')
 away <- read.csv('AwayTeam.csv')
 
 ```
-
+\newpage
 ```{r cars, echo = FALSE, results = "asis"}
 players <- 1
 used_tees <- home[players,'Tee']
@@ -47,7 +47,13 @@ scd <- (tees[tees["Tees"]==used_tees,])
 p1_CH <- round(home[players, "Index"]* used_slope / 113)
 p2_CH <- round(away[players, "Index"]* used_slope / 113)
 
-scd[(p1_CH - p2_CH) >= scd$Handicap, 6] <- rep('\\hspace{3 pc}*', p1_CH - p2_CH)
+if (p1_CH > p2_CH) {
+  scd[(p1_CH - p2_CH) >= scd$Handicap, 6] <- rep('\\hspace{3 pc}*', p1_CH - p2_CH)
+}
+
+if (p2_CH > p1_CH) {
+  scd[(p2_CH - p1_CH) >= scd$Handicap, 7] <- rep('\\hspace{3 pc}*', p2_CH - p1_CH)
+}
 
 
 out_yds <- sum(scd[1:9,"Yards"])
@@ -74,11 +80,11 @@ scd <- xtable(t(scd[,-2]))
 align(scd) <- c('l|','|l|',rep('c|',23))
 
 dont_scrub <- function(x) {
-  gsub('ww','  ', x)
+  x
 }
 
 print.xtable(scd, include.colnames = FALSE, include.rownames = FALSE,
-             comment = FALSE, timestamp = FALSE)#, sanitize.text.function = dont_scrub)
+             comment = FALSE, timestamp = FALSE, sanitize.text.function = dont_scrub)
 ```
 
 
