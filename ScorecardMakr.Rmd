@@ -2,9 +2,13 @@
 title: "Team Match Scorecards"
 output: pdf_document
 classoption: landscape
-geometry: margin=0cm
+geometry: "left = 0cm, right = 0cm, top = 2cm, bottom = 2cm"
+header-includes: 
+  - \usepackage{caption}
+  - \pagenumbering{gobble}
 ---
-
+\captionsetup[table]{labelformat=empty}
+\renewcommand{\arraystretch}{1.5}
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(pander)
@@ -29,7 +33,8 @@ tees <- data.frame("Hole" = c(1:18,1:18), "Tees" = ts,
                    "Yards" = yds, "Par" = par, "Handicap" = hcp,
                    "Player 1" = scores, "Player 2" = scores, 
                    "Player 3" = scores, "Player 4" = scores, 
-                   "Player 5" = scores, "Player 6" = scores)
+                   "Player 5" = scores, "Player 6" = scores,
+                   "Player 7" = scores, "Player 8" = scores)
 
 
 ratings <- read.csv('Ratings.csv')
@@ -39,52 +44,116 @@ away <- read.csv('AwayTeam.csv')
 ```
 \newpage
 ```{r cars, echo = FALSE, results = "asis"}
-players <- 1
-used_tees <- home[players,'Tee']
-used_slope <- ratings[ratings$Tee == used_tees,"Slope"]
-scd <- (tees[tees["Tees"]==used_tees,])
 
-p1_CH <- round(home[players, "Index"]* used_slope / 113)
-p2_CH <- round(away[players, "Index"]* used_slope / 113)
-
-if (p1_CH > p2_CH) {
-  scd[(p1_CH - p2_CH) >= scd$Handicap, 6] <- rep('\\hspace{3 pc}*', p1_CH - p2_CH)
-}
-
-if (p2_CH > p1_CH) {
-  scd[(p2_CH - p1_CH) >= scd$Handicap, 7] <- rep('\\hspace{3 pc}*', p2_CH - p1_CH)
-}
-
-
-out_yds <- sum(scd[1:9,"Yards"])
-out_par <- sum(scd[1:9,"Par"])
-in_yds <- sum(scd[10:18, "Yards"])
-in_par <- sum(scd[10:18, "Par"])
-scd <- rbind(c("Hole","Tees","Yards","Par","Handicap",
-               "Player 1","Player 2", "Player 3", "Player 4", "Player 5", "Player 6"),
-             scd)
-
-
-scd <- rbind(scd[1:10,],
-             c("Out", "", out_yds, out_par, rep("", 7)),
-             scd[-(1:10),],
-             c("In", "", in_yds, in_par, rep("", 7)),
-             c("Total","",in_yds + out_yds, in_par + out_par, rep("",7)),
-             c("HCP", rep("",10)),
-             c("Net",rep("",10)))
-
-scd[1,-(1:5)] <- c(home[players, "Player"],away[players, "Player"], rep("",4))
-scd[23,6:7] <- c(p1_CH, p2_CH)
-
-scd <- xtable(t(scd[,-2]))
-align(scd) <- c('l|','|l|',rep('c|',23))
-
-dont_scrub <- function(x) {
-  x
-}
-
-print.xtable(scd, include.colnames = FALSE, include.rownames = FALSE,
-             comment = FALSE, timestamp = FALSE, sanitize.text.function = dont_scrub)
+for (matches in 1:18)  {
+  team_match = FALSE
+  is_odd = FALSE
+  if (matches %% 3 == 0) {
+    team_match = TRUE
+  }
+  
+  if ((matches + 1) %% 3 == 0) {
+    is_odd = TRUE
+  }
+  
+  
+  group <- floor((matches - 1) / 3) + 1
+  players <- (group - 1) * 2 + 1
+  if (is_odd) {
+    players <- players + 1
+  }
+  
+  used_tees <- home[players,'Tee']
+  used_slope <- ratings[ratings$Tee == used_tees,"Slope"]
+  scd <- (tees[tees["Tees"]==used_tees,])
+  
+  p1_CH <- round(home[players, "Index"]* used_slope / 113)
+  p2_CH <- round(away[players, "Index"]* used_slope / 113)
+  if (team_match) {
+    p1_CH <- round(home[players, "Index"]* used_slope / 113)
+    p2_CH <- round(home[players + 1, "Index"]* used_slope / 113)
+    p3_CH <- round(away[players, "Index"] * used_slope / 113)
+    p4_CH <- round(away[players + 1, "Index"] * used_slope / 113)
+    min_CH <- min(p1_CH, p2_CH, p3_CH, p4_CH)
+  }
+  if (!team_match) {
+    if (p1_CH > p2_CH) {
+      scd[(p1_CH - p2_CH) >= scd$Handicap, 6] <- rep('\\hspace{1 pc}*', p1_CH - p2_CH)
+    }
+    
+    if (p2_CH > p1_CH) {
+      scd[(p2_CH - p1_CH) >= scd$Handicap, 8] <- rep('\\hspace{1 pc}*', p2_CH - p1_CH)
+    }
+  } else {
+    
+    if (p1_CH > min_CH) {
+      scd[(p1_CH - min_CH) >= scd$Handicap, 6] <- rep('\\hspace{1 pc}*', p1_CH - min_CH)
+    }
+    
+    if (p2_CH > min_CH) {
+      scd[(p2_CH - min_CH) >= scd$Handicap, 7] <- rep('\\hspace{1 pc}*', p2_CH - min_CH)
+    }
+    
+    if (p3_CH > min_CH) {
+      scd[(p3_CH - min_CH) >= scd$Handicap, 9] <- rep('\\hspace{1 pc}*', p3_CH - min_CH)
+    }
+    
+    if (p4_CH > min_CH) {
+      scd[(p4_CH - min_CH) >= scd$Handicap, 10] <- rep('\\hspace{1 pc}*', p4_CH - min_CH)
+    }
+  }
+  if (team_match) {
+    caption <- paste("Match",matches, home[players, "Player"], "/", 
+                     home[players + 1, "Player"],
+                   "vs.",away[players, "Player"], '/',
+                   away[players + 1, "Player"],
+                   tolower(used_tees), "tees")
+  } else {
+    caption <- paste("Match",matches, home[players, "Player"],
+                   "vs.",away[players, "Player"], tolower(used_tees), "tees")
+  }
+  
+  out_yds <- sum(scd[1:9,"Yards"])
+  out_par <- sum(scd[1:9,"Par"])
+  in_yds <- sum(scd[10:18, "Yards"])
+  in_par <- sum(scd[10:18, "Par"])
+  scd <- rbind(c("Hole","Tees","Yards","Par","Handicap",
+                 "Player 1","Player 2", "Player 3", "Player 4", "Player 5", "Player 6",
+                 "Player 7","Player 8"),
+               scd)
+  
+  
+  scd <- rbind(scd[1:10,],
+               c("Out", "", out_yds, out_par, rep("", 11)),
+               scd[-(1:10),],
+               c("In", "", in_yds, in_par, rep("", 11)),
+               c("Total","",in_yds + out_yds, in_par + out_par, rep("",11)),
+               c("HCP", rep("",14)),
+               c("Net",rep("",14)))
+  if (team_match) {
+    scd[1, -(1:5)] <- c(home[players, "Player"], home[players + 1, "Player"],"",
+                        away[players, "Player"], away[players + 1, "Player"],
+                        rep("",3))
+    scd[23,6:10] <- c(p1_CH, p2_CH, "", p3_CH, p4_CH)
+    
+  } else {
+    scd[1,-(1:5)] <- c(home[players, "Player"],"",away[players, "Player"], rep("",5))
+    scd[23,6:8] <- c(p1_CH, "", p2_CH)
+  }
+  
+  scd <- xtable(t(scd[,-2]), caption = caption)
+  align(scd) <- c('l|','|l|',rep('c|',23))
+  
+  dont_scrub <- function(x) {
+    x
+  }
+  
+  print.xtable(scd, include.colnames = FALSE, include.rownames = FALSE,
+               comment = FALSE, timestamp = FALSE, sanitize.text.function = dont_scrub,
+               hline.after = c(0, 4:nrow(scd)), caption.placement = "top")
+  
+  cat("\n\\newpage\n")
+}           #add.to.row = list(pos = as.list(5:nrow(scd)), command = rep('\\\\[10pt]',6)))
 ```
 
 
